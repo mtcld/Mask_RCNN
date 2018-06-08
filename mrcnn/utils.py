@@ -99,11 +99,7 @@ def compute_overlaps_masks(masks1, masks2):
     '''Computes IoU overlaps between two sets of masks.
     masks1, masks2: [Height, Width, instances]
     '''
-    
-    # If either set of masks is empty return empty result
-    if masks1.shape[0] == 0 or masks2.shape[0] == 0:
-        return np.zeros((masks1.shape[0], masks2.shape[-1]))
-    # flatten masks and compute their areas
+    # flatten masks
     masks1 = np.reshape(masks1 > .5, (-1, masks1.shape[-1])).astype(np.float32)
     masks2 = np.reshape(masks2 > .5, (-1, masks2.shape[-1])).astype(np.float32)
     area1 = np.sum(masks1, axis=0)
@@ -280,6 +276,7 @@ class Dataset(object):
         image_info.update(kwargs)
         self.image_info.append(image_info)
 
+
     def image_reference(self, image_id):
         """Return a link to the image in its source Website or details about
         the image that help looking it up or debugging it.
@@ -305,6 +302,7 @@ class Dataset(object):
         self.class_ids = np.arange(self.num_classes)
         self.class_names = [clean_name(c["name"]) for c in self.class_info]
         self.num_images = len(self.image_info)
+
         self._image_ids = np.arange(self.num_images)
 
         # Mapping from source class and image IDs to internal IDs
@@ -386,10 +384,31 @@ class Dataset(object):
                 a binary mask per instance.
             class_ids: a 1D array of class IDs of the instance masks.
         """
-        # Override this function to load a mask from your dataset.
-        # Otherwise, it returns an empty mask.
-        mask = np.empty([0, 0, 0])
-        class_ids = np.empty([0], np.int32)
+        """Generate instance masks for an image.
+                      Returns:
+                       masks: A bool array of shape [height, width, instance count] with
+                           one mask per instance.
+                       class_ids: a 1D array of class IDs of the instance masks.
+                       """
+        # If not a balloon dataset image, delegate to parent class.
+        image_info = self.image_info[image_id]
+        # if image_info["source"] != "hotplate":
+        #     return super(self.__class__, self).load_mask_hotplate(image_id)
+        # Convert polygons to a bitmap mask of shape
+        # [height, width, instance_count]
+        info = self.image_info[image_id]
+        mask = np.zeros([info["height"], info["width"], len(info["polygons"])],
+                        dtype=np.uint8)
+        for i, p in enumerate(info["polygons"]):
+            # Get indexes of pixels inside the polygon and set them to 1
+            p['all_points_x']=np.asarray(p['all_points_x'],dtype=np.int32)
+            p['all_points_y'] = np.asarray(p['all_points_y'],dtype=np.int32)
+            rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
+            mask[rr, cc, i] = 1
+
+        # Return mask, and array of class IDs of each instance. Since we have
+        # one class ID only, we return an array of 1s
+        class_ids=np.ones([mask.shape[-1]], dtype=np.int32)*4# 4 for fourth class in our data
         return mask, class_ids
 
 

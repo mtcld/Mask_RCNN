@@ -1,7 +1,6 @@
 """
 Mask R-CNN
 Display and Visualization Functions.
-
 Copyright (c) 2017 Matterport, Inc.
 Licensed under the MIT License (see LICENSE for details)
 Written by Waleed Abdulla
@@ -15,7 +14,7 @@ import itertools
 import colorsys
 
 import numpy as np
-from skimage.measure import find_contours
+from skimage.measure import find_contours,approximate_polygon
 import matplotlib.pyplot as plt
 from matplotlib import patches,  lines
 from matplotlib.patches import Polygon
@@ -82,7 +81,7 @@ def apply_mask(image, mask, color, alpha=0.5):
 
 
 def display_instances(image, boxes, masks, class_ids, class_names,
-                      scores=None, title="",
+                      scores=None,max_point=None,centroid=None, title="",
                       figsize=(16, 16), ax=None,
                       show_mask=True, show_bbox=True,
                       colors=None, captions=None):
@@ -158,12 +157,18 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         padded_mask = np.zeros(
             (mask.shape[0] + 2, mask.shape[1] + 2), dtype=np.uint8)
         padded_mask[1:-1, 1:-1] = mask
-        contours = find_contours(padded_mask, 0.5)
+        contours = find_contours(padded_mask,0.5)
         for verts in contours:
             # Subtract the padding and flip (y, x) to (x, y)
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
+        # appr_bb = approximate_polygon(padded_mask, tolerance=0.02)
+
+        # ax.plot(appr_br)
+    #ngoc added
+    ax.plot(centroid[1],centroid[0],marker='x',color='r')
+    ax.plot(max_point[1],max_point[0], marker='x', color='g')
     ax.imshow(masked_image.astype(np.uint8))
     if auto_show:
         plt.show()
@@ -306,7 +311,6 @@ def display_top_masks(image, mask, class_ids, class_names, limit=4):
 
 def plot_precision_recall(AP, precisions, recalls):
     """Draw the precision-recall curve.
-
     AP: Average precision at IoU >= 0.5
     precisions: list of precision values
     recalls: list of recall values
@@ -363,7 +367,6 @@ def draw_boxes(image, boxes=None, refined_boxes=None,
                title="", ax=None):
     """Draw bounding boxes and segmentation masks with differnt
     customizations.
-
     boxes: [N, (y1, x1, y2, x2, class_id)] in image coordinates.
     refined_boxes: Like boxes, but draw with solid lines to show
         that they're the result of refining 'boxes'.
