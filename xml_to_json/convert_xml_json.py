@@ -8,6 +8,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-a',help='annotations path')
 parser.add_argument('-i',help='image folder path')
+parser.add_argument('-v',help='verbose mode',action='store_true',default=False)
+parser.add_argument('-o',help='output filename',default='anno.json')
 args = parser.parse_args()
 
 
@@ -70,18 +72,19 @@ json format:
 
 annopath= args.a
 imagepath = args.i
+output_path = args.o
+verbose = args.v
 data=[]#data will be write
 xml_path=os.path.join(os.getcwd(),annopath)
 for f in os.listdir(xml_path):
+
   if not f.endswith('.xml'):
+    print('wrong extension')
     continue
   xml_file = os.path.join(xml_path, f)
-  print(xml_file)
   image_path= os.path.join(os.getcwd(),imagepath,f.split('.xml')[0] +'.jpg')
   try :
     file_size= os.path.getsize(image_path)
-
-
     tree = ET.parse(xml_file)
     root = tree.getroot()
     if root.tag != 'annotation':
@@ -99,10 +102,10 @@ for f in os.listdir(xml_path):
         xs=[]
         ys=[]
         for polygon in elem:#check if this object is hotplate
-          if polygon.text != 'hotplate':
-            continue
-          else:
+          if polygon.text in ['broken', 'crack', 'carck', 'broke', 'crackk']:
+
             for polygon in elem:#loop inside object object
+
               if polygon.tag=='polygon':
                 for pt in polygon:#loop inside polygon
                   for ax in pt:
@@ -123,10 +126,12 @@ for f in os.listdir(xml_path):
             filename['size'] = file_size
             filename['regions']=regions
             data.append(filename)
-
-
+            if verbose :
+              print(xml_file, polygon.text)
   except:
-    pass
+      print('aborted',xml_file)
 
-with open('anno.json','w') as f:
+with open(output_path,'w') as f:
   json.dump(data,f,indent=2)
+
+print('file saved in:',os.path.abspath(output_path))
