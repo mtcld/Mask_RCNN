@@ -57,7 +57,8 @@ pip-delete-this-directory.txt
 venv/
 ENV/
 
-
-#data file
+.zip
 *.jpg
 *.xml
+*.JPG
+
